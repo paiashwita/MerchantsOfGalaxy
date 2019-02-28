@@ -1,4 +1,6 @@
-﻿using System.Collections.Generic;
+﻿using Common;
+using Common.Custom;
+using System.Collections.Generic;
 
 namespace App
 {
@@ -6,18 +8,31 @@ namespace App
     {
         private LanguageInterpreter _interpreter;
 
-        public GalaxyApp(RomanTranslator romantranslator)
+        public GalaxyApp(Processor processor)
         {
-            _interpreter = new LanguageInterpreter(romantranslator);
+            _interpreter = new LanguageInterpreter(processor);
         }
 
         public void Run(List<string> inputStatements)
         {
-            var answers =_interpreter.ParseStatements(inputStatements);
-            foreach (var answer in answers)
+            foreach (var inputStatement in inputStatements)
             {
-                System.Console.WriteLine(answer);
+                try
+                {
+                    var currentAnswer = _interpreter.ParseStatements(inputStatement);
+                    System.Console.WriteLine(currentAnswer.AnswerText);
+                }
+                catch (StatementTypeNotFoundException ex)
+                {
+                    System.Console.WriteLine(ex.Message);
+                }
+                catch (System.Exception ex)
+                {
+                    System.Console.WriteLine(ex.Message);
+                }
+                
             }
+            
         }
 
     }

@@ -31,7 +31,7 @@ namespace App.Console
 
                 var settings = GalaxyAppSettings.GetGalaxyAppSettings();
 
-                GalaxyApp app = new GalaxyApp(settings.RomanTranslator);
+                GalaxyApp app = new GalaxyApp(new Processor(settings.RomanTranslator));
                 app.Run(inputStatements);
                 
             }

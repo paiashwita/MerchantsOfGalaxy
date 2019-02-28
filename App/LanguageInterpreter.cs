@@ -4,6 +4,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Common.Concrete;
+using Common.Custom;
 
 namespace App
 {
@@ -11,170 +13,92 @@ namespace App
     {
         #region Private Fields
 
-        private readonly RomanTranslator _romantranslator;
         private Dictionary<string, string> _galaxyToRomanMap = new Dictionary<string, string>();
         private Dictionary<string, double> _perUnitCredits = new Dictionary<string, double>();
-
         private const char INPUT_STATEMENT_SPLIT_CHARACTER = ' ';
+        private List<IStatementTypeDecider> _statementTypes = new List<IStatementTypeDecider>();
+        private Processor _langaugeProcessor;
 
         #endregion
 
         #region Constructor
 
-        public LanguageInterpreter(RomanTranslator romantranslator)
+        public LanguageInterpreter(Processor langaugeProcessor)
         {
-            _romantranslator = romantranslator;
+            _langaugeProcessor = langaugeProcessor;
+
+            var statementInterfaceType = typeof(IStatementTypeDecider);
+            _statementTypes.Add(new AssignmentStatementType());
+            _statementTypes.Add(new CreditsAssignmentStatementType());
+            _statementTypes.Add(new RomanQueryStatementType());
+            _statementTypes.Add(new CreditsQueryStatementType());
         }
+
 
         #endregion
 
         #region Public Methods
 
-        public List<string> ParseStatements(List<string> inputStatements)
+        public Answer ParseStatements(string inputStatement)
         {
-            string currentQuestion, currentAnswer;
-            List<string> answers = new List<string>();
+            Answer answer = null;
 
-            foreach (var statement in inputStatements)
+            IStatementTypeDecider statementTypeSelector = GetStatementTypeSelector(inputStatement);
+            if (statementTypeSelector is null)
             {
-                currentQuestion = string.Empty;
-                currentAnswer = "NOT CALCULATED";
+                throw new StatementTypeNotFoundException();
+            }
+            else
+            {
+                Statement statement = StatementFactory.GetStatement(statementTypeSelector.StatementType, SplitTheInputStatements(CleanQueryString(inputStatement)));
 
-                if (statement.StartsWith(Constants.QUESTION_STATEMENTS_WITH_IS))
+                switch (statementTypeSelector.StatementType)
                 {
-                    currentQuestion = statement.Replace(Constants.QUESTION_STATEMENTS_WITH_IS, string.Empty).Replace("?", string.Empty).Trim();
-                    currentAnswer = CalculateRomanValue(SplitTheInputStatements(currentQuestion, INPUT_STATEMENT_SPLIT_CHARACTER)).ToString();
+                    case StatementType.CreditsQuery:
+                        answer = _langaugeProcessor.Execute(StatementType.CreditsQuery, statement as CreditsQueryStatement);
+                        break;
 
-                    answers.Add(string.Format("{0} is {1}", currentQuestion, currentAnswer));
-                }
-                else if (statement.StartsWith(Constants.QUESTION_STATEMENTS_WITHCREDITS))
-                {
-                    currentQuestion = statement.Replace(Constants.QUESTION_STATEMENTS_WITHCREDITS, string.Empty).Replace("?", string.Empty).Trim();
-                    currentAnswer = CalculateCredits(SplitTheInputStatements(currentQuestion, INPUT_STATEMENT_SPLIT_CHARACTER)).ToString();
+                    case StatementType.RomanQuery:
+                        answer = _langaugeProcessor.Execute(StatementType.RomanQuery, statement as RomanQueryStatement);
+                        break;
 
-                    answers.Add(string.Format("{0} is {1} Credits", currentQuestion, currentAnswer));
-                }
-                else if (statement.Contains(Constants.ASSIGNMENT_STATEMENTS_IS) && !statement.Contains(Constants.ASSIGNMENT_STATEMENTS_WITHCREDITS))
-                {
-                    GenerateGalaxyToRomanMap(SplitTheInputStatements(statement, INPUT_STATEMENT_SPLIT_CHARACTER));
-                }
-                else if (statement.Contains(Constants.ASSIGNMENT_STATEMENTS_IS) && statement.Contains(Constants.ASSIGNMENT_STATEMENTS_WITHCREDITS))
-                {
-                    GeneratePerUnitCreditMeasure(SplitTheInputStatements(statement, INPUT_STATEMENT_SPLIT_CHARACTER));
-                }
-                else
-                {
-                    answers.Add(Constants.NO_IDEA);
+                    case StatementType.CreditsAssignment:
+                        answer = _langaugeProcessor.Execute(StatementType.CreditsQuery, statement as CreditsAssignmentStatement);
+                        break;
+
+                    case StatementType.Assignment:
+                        answer = _langaugeProcessor.Execute(StatementType.Assignment, statement as AssignmentStatement);
+                        break;
+
+                    case StatementType.NoIdea:
+                    default:
+                        break;
                 }
             }
-            return answers;
+            return answer;
         }
 
         #endregion
 
         #region Private Methods
 
-        private int CalculateRomanValue(string[] input)
+        private IStatementTypeDecider GetStatementTypeSelector(string inputStatement)
         {
-            StringBuilder romanNumberBuilder = new StringBuilder();
-            int romanTranslateValue = -1;
-            string romanValue = string.Empty, metal = string.Empty;
-
-            for (int i = 0; i < input.Length; i++)
-            {
-                if (_galaxyToRomanMap.TryGetValue(input[i], out romanValue))
-                {
-                    romanNumberBuilder.Append(romanValue);
-                }
-                else
-                {
-                    break;
-                }
-            }
-            romanValue = romanNumberBuilder.ToString();
-            if (_romantranslator.ValidateWord(romanValue))
-            {
-                romanTranslateValue = _romantranslator.CalculateWordValue(romanValue);
-            }
-
-            return romanTranslateValue;
+            return _statementTypes.FirstOrDefault(s => s.isTrue(inputStatement));
         }
 
-        private double CalculateCredits(string[] input)
+        private static string[] SplitTheInputStatements(string input)
         {
-            int i, romanTranslateValue = -1;
-            double perUnitValue = 0, credits = 0;
-            string romanValue = string.Empty, metal = string.Empty;
-
-            romanTranslateValue = CalculateRomanValue(input);
-
-            for (i = 0; i < input.Length; i++)
-            {
-                if (!_galaxyToRomanMap.TryGetValue(input[i], out romanValue))
-                {
-                    break;
-                }
-            }
-
-            metal = input[i];
-
-            if (_perUnitCredits.TryGetValue(metal, out perUnitValue))
-            {
-                credits = perUnitValue * romanTranslateValue;
-            }
-
-            return credits;
+            return input.Split(INPUT_STATEMENT_SPLIT_CHARACTER);
         }
-
-        private void GenerateGalaxyToRomanMap(string[] input)
+   
+        private static string CleanQueryString(string input)
         {
-            var galaxyWord = input[0];
-            var romanWord = input[2];
-
-            if (!_romantranslator.ValidateWord(romanWord))
-            {
-                System.Console.WriteLine("This roman number is not supported.");
-            }
-            else
-            {
-                _galaxyToRomanMap.Add(galaxyWord, romanWord);
-            }
+            return input.Replace("?", string.Empty)
+                        .Replace(Constants.QUESTION_STATEMENTS_WITHCREDITS, string.Empty)
+                        .Replace(Constants.QUESTION_STATEMENTS_WITH_IS, string.Empty)
+                        .Trim();
         }
-
-        private void GeneratePerUnitCreditMeasure(string[] input)
-        {
-
-            StringBuilder romanNumberBuilder = new StringBuilder();
-            int i, romanTranslateValue = -1, credits = 0;
-            string romanValue = string.Empty, metal = string.Empty;
-
-            for (i = 0; i < input.Length; i++)
-            {
-                if (_galaxyToRomanMap.TryGetValue(input[i], out romanValue))
-                {
-                    romanNumberBuilder.Append(romanValue);
-                }
-                else
-                {
-                    break;
-                }
-            }
-            romanValue = romanNumberBuilder.ToString();
-            if (_romantranslator.ValidateWord(romanValue))
-            {
-                romanTranslateValue = _romantranslator.CalculateWordValue(romanValue);
-            }
-
-            metal = input[i];
-            credits = Int32.Parse(input[i + 2]);
-            _perUnitCredits.Add(metal, (double)credits / romanTranslateValue);
-        }
-
-        private string[] SplitTheInputStatements(string input, char splitCharacter)
-        {
-            return input.Split(splitCharacter);
-        }
-
         #endregion
     }
 }
