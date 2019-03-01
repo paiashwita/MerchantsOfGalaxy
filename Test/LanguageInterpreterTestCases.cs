@@ -73,6 +73,13 @@ namespace Test
             Assert.AreEqual(actual.AnswerText, expected.AnswerText);
         }
 
+
+        [TestMethod]
+        public void LanguageInterpreter_CreditsQueryStatement_WithoutAssignementStatements()
+        {
+            Assert.ThrowsException<RomanNumberNotValidExcpetion>(()=>interpreter.ParseStatements("how many Credits is glob prok Iron ?"));
+        }
+
         [TestMethod]
         public void StatementTypeNotFoundException()
         {

@@ -11,5 +11,6 @@ namespace Common
         public const string QUESTION_STATEMENTS_WITH_IS = "how much is ";
         public const string QUESTION_STATEMENTS_WITHCREDITS = "how many Credits is ";
         public const string NO_IDEA = "I have no idea what you are talking about";
-    }
+        public const string ROMAN_NUMBER_NOT_VALID = "Roman Number not valid";
+}
 }

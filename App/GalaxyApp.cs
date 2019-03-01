@@ -20,7 +20,11 @@ namespace App
                 try
                 {
                     var currentAnswer = _interpreter.ParseStatements(inputStatement);
-                    System.Console.WriteLine(currentAnswer.AnswerText);
+
+                    if (currentAnswer.StatementType == StatementType.CreditsQuery || currentAnswer.StatementType == StatementType.RomanQuery)
+                    {
+                        System.Console.WriteLine(currentAnswer.AnswerText);
+                    }
                 }
                 catch (StatementTypeNotFoundException ex)
                 {

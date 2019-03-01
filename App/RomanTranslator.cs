@@ -87,6 +87,10 @@ namespace App
             int result = 0;
             int current_ordinal = 0, previous_ordinal = 0, current_translated_value = 0, previous_translated_value=0;
 
+            if (string.IsNullOrEmpty(word))
+            {
+                return -1;
+            }
             result = (int)_romanNumbers.GetTranslatedCharacterValue(word[0]);
             for (int counter = 1; counter < word.Length; counter++)
             {

@@ -63,7 +63,7 @@ namespace App
                         break;
 
                     case StatementType.CreditsAssignment:
-                        answer = _langaugeProcessor.Execute(StatementType.CreditsQuery, statement as CreditsAssignmentStatement);
+                        answer = _langaugeProcessor.Execute(StatementType.CreditsAssignment, statement as CreditsAssignmentStatement);
                         break;
 
                     case StatementType.Assignment:
